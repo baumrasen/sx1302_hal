@@ -191,6 +191,20 @@ found in the `libtools` directory.
 
 ## 7. Changelog
 
+### v2.x
+
+#### info
+disable serial-getty@ttyS0, because the S0 will be blocked by it
+
+`systemctl disable serial-getty@ttyS0`
+
+#### changes
+
+* changed behaviour of `WARNING: [gps] read() returned value ...` with serial gps to reduce system load.
+* changed things, to get the forwarder working with debain bookworm
+* updated the possible count of gps fields
+
+
 ### v2.1.0 ###
 
 > #### Updates
