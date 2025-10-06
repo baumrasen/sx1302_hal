@@ -3391,6 +3391,10 @@ void thread_gps(void) {
     char serial_buff[128]; /* buffer to receive GPS data */
     size_t wr_idx = 0;     /* pointer to end of chars in buffer */
 
+    /* variables to limit error messages */
+    time_t last_read_warning_time = 0;
+    unsigned long suppressed_warnings = 0;
+
     /* variables for PPM pulse GPS synchronization */
     enum gps_msg latest_msg; /* keep track of latest NMEA message parsed */
 
@@ -3404,7 +3408,14 @@ void thread_gps(void) {
         /* blocking non-canonical read on serial port */
         ssize_t nb_char = read(gps_tty_fd, serial_buff + wr_idx, LGW_GPS_MIN_MSG_SIZE);
         if (nb_char <= 0) {
-            MSG("WARNING: [gps] read() returned value %zd\n", nb_char);
+            time_t current_time = time(NULL);
+            if (current_time > last_read_warning_time) {
+                MSG("WARNING: [gps] read() returned value %zd, errno=%d (%s). (%lu similar warnings suppressed)\n", nb_char, errno, strerror(errno), suppressed_warnings);
+                last_read_warning_time = current_time;
+                suppressed_warnings = 0;
+            } else {
+                suppressed_warnings++;
+            }
             continue;
         }
         wr_idx += (size_t)nb_char;

@@ -30,6 +30,7 @@ License: Revised BSD License, see LICENSE.TXT file include in the project
 #include <signal.h>     /* sigaction */
 #include <stdlib.h>     /* exit */
 #include <unistd.h>     /* read */
+#include <errno.h>      /* errno */
 
 #include "loragw_hal.h"
 #include "loragw_gps.h"
@@ -197,6 +198,10 @@ int main(int argc, char **argv)
     /* NMEA/UBX variables */
     enum gps_msg latest_msg; /* keep track of latest NMEA/UBX message parsed */
 
+    /* variables to limit error messages */
+    time_t last_read_warning_time = 0;
+    unsigned long suppressed_warnings = 0;
+
     /* parse command line options */
     while ((i = getopt (argc, argv, "hk:r:d:u")) != -1) {
         switch (i) {
@@ -331,7 +336,14 @@ int main(int argc, char **argv)
         /* blocking non-canonical read on serial port */
         ssize_t nb_char = read(gps_tty_dev, serial_buff + wr_idx, LGW_GPS_MIN_MSG_SIZE);
         if (nb_char <= 0) {
-            printf("WARNING: [gps] read() returned value %zd\n", nb_char);
+            time_t current_time = time(NULL);
+            if (current_time > last_read_warning_time) {
+                printf("WARNING: [gps] read() returned value %zd, errno=%d (%s). (%lu similar warnings suppressed)\n", nb_char, errno, strerror(errno), suppressed_warnings);
+                last_read_warning_time = current_time;
+                suppressed_warnings = 0;
+            } else {
+                suppressed_warnings++;
+            }
             continue;
         }
         wr_idx += (size_t)nb_char;
